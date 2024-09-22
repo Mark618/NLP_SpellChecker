@@ -42,7 +42,7 @@ This project focuses on detecting spelling errors and providing correct word sug
     ```bash
     python app.py
     ```
-2. Open your web browser and go to `http://127.0.0.1:8050/` to access the interface.
+2. Open your web browser and go to `http://127.0.0.1:{port number}/` to access the interface.
 
 3. Enter text directly into the interface to check for spelling errors and view suggestions.
 
