@@ -75,7 +75,7 @@ class SpellCorrection:
         words_pos = []    
         temp_sent = []
 
-        for token in nlp(sentences.lower()):
+        for token in self.nlp(sentences.lower()):
             if token.text != " " and token.text.isalpha():       
                 temp_sent.append(str(token))
 
@@ -84,7 +84,7 @@ class SpellCorrection:
             bigram = (temp_sent[i], temp_sent[i + 1])   
             
             # Get the probability of the bigram
-            probability = model.score(bigram[1], [bigram[0]])
+            probability = self.model.score(bigram[1], [bigram[0]])
             
             if probability < 0.001:
                 # Add the bigram to the list of wrong words
