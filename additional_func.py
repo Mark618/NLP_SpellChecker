@@ -51,6 +51,7 @@ class SpellCorrection:
 
 
     def detect_spell_error(self,sentences):
+        # Non word error detection
         wrong_words = []
         words_pos = []    
         temp_sent = []
@@ -68,6 +69,36 @@ class SpellCorrection:
 
         return wrong_words,words_pos
     
+    def detect_real_error(self,sentences):
+        #https://aclanthology.org/O13-1022.pdf
+        wrong_words = []
+        words_pos = []    
+        temp_sent = []
+
+        for token in nlp(sentences.lower()):
+            if token.text != " " and token.text.isalpha():       
+                temp_sent.append(str(token))
+
+        i = 0
+        while i < len(temp_sent) - 1:
+            bigram = (temp_sent[i], temp_sent[i + 1])   
+            
+            # Get the probability of the bigram
+            probability = model.score(bigram[1], [bigram[0]])
+            
+            if probability < 0.001:
+                # Add the bigram to the list of wrong words
+                wrong_words.append(bigram)
+                words_pos.append((i, i+1))
+                
+                # Skip the next word by incrementing i by 2
+                i += 2
+            else:
+                # Increment i by 1 if no error detected
+                i += 1
+        
+        return wrong_words,words_pos  
+    
     def preproc_sent(self,sentences):
         temp_sent =[]
         
@@ -76,6 +107,7 @@ class SpellCorrection:
                 temp_sent.append(str(token))
 
         return temp_sent
+    
     def possible_words(self,wrd_lst,wrong_word):
         pos_words = {}
         sor_out = {}
@@ -94,4 +126,5 @@ class SpellCorrection:
             sor_out[pob_word] = prob        
         sorted_keys = sorted(sor_out, key=sor_out.get, reverse=True)
             
-        return sorted_keys
+        return sorted_keys    
+   
