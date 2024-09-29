@@ -79,7 +79,7 @@ app.layout = html.Div(
                         """),
                 dcc.Markdown('___')
             ]),
-            
+            #Paste text to get spelling suggestions for though terms such as glaucoma , liver , heart glauasdcoma,liveer,herat
             html.Div(id='page-content', className='container col s10', children=[
                 html.Div(className="input-field",children=[
                     html.H4("Input"),
@@ -92,7 +92,9 @@ app.layout = html.Div(
                 html.Button('Check', id='check-button', className="waves-effect waves-light btn", n_clicks=0),
                 
                 html.Div(id='spelling-error',className='container col s10',children=[]),
-                dcc.Store(id='ids-store'),
+                dcc.Store(id='ids-store'),                
+                dcc.Store(id='real-ids'),
+               
         
             ]),                
                 
@@ -104,20 +106,27 @@ app.layout = html.Div(
 
 
 @callback(
-    Output('spelling-error', 'children'),
-    Output('ids-store','data'),
+    Output('spelling-error', 'children', allow_duplicate=True),
+    Output('ids-store','data'),   
     Input('check-button', 'n_clicks'),
     State('textarea', 'value'),
-    prevent_initial_call=True
+    prevent_initial_call=True    
 )
 def check_spell(n_clicks, value):
-    if n_clicks > 0:
-        wrong_words,words_pos = spell_crrct_obj.detect_spell_error(value)
+    if n_clicks >0:
+        wrong_words,words_pos = spell_crrct_obj.detect_spell_error(value)        
+        
         temp_sent = spell_crrct_obj.preproc_sent(value)
-        if len(words_pos) ==0:
-            return(html.P("No spelling error detected/ No match found.")),[None,None]
-        else:
-            div_child =[]
+        
+        if len(words_pos)==0:
+            div_child_none = []
+            div_child_none.append(html.P("No spelling error detected/ No match found."))
+            div_child_none.append(html.Button('Next', id='submit-button', className="waves-effect waves-light btn", n_clicks=0))
+            
+            return div_child_none,[words_pos,temp_sent]
+                
+        else: 
+            div_child =[]           
             div_child.append(html.H5("Result"))
             for i,word in enumerate(wrong_words):
                 sorted_keys = spell_crrct_obj.possible_words(wl_process,word)
@@ -127,18 +136,19 @@ def check_spell(n_clicks, value):
                     dcc.Dropdown(sorted_keys,placeholder="Dictionary",id=f'dropdown_{word[1]}')
                 ])
                 div_child.append(section)
-                new_button = html.Button('Submit', id='submit-button', className="waves-effect waves-light btn", n_clicks=0)
+            new_button = html.Button('Next', id='submit-button', className="waves-effect waves-light btn", n_clicks=0)
             div_child.append(html.Br())    
-            div_child.append(new_button)
+            div_child.append(new_button)  
 
             return div_child,[words_pos,temp_sent]
 
 
    
 @callback(
-    Output('textarea','value'),
+    Output('textarea','value', allow_duplicate=True),
+    # Output('spelling-error', 'children', allow_duplicate=True),
     Input("submit-button",'n_clicks'),
-    Input('spelling-error', 'children'),
+    State('spelling-error', 'children'),
     State('ids-store','data'),        
     prevent_initial_call=True
 )
@@ -147,20 +157,75 @@ def get_dropdown_id(n_clicks,children,data):
         ch_list = []
         word_pos=data[0]       
         temp_sent = data[1]
-        
-        for child in children:    
-            if type(child['props']['children']) == list:            
-               word_sel=str(child['props']['children'][1]['props']['value'])
-               ch_list.append(word_sel) 
-        for i,word in enumerate(ch_list):       
-            temp_sent[word_pos[i]] =word
+        if len(word_pos)!=0:
+            for child in children:    
+                if type(child['props']['children']) == list:            
+                    word_sel=str(child['props']['children'][1]['props']['value'])
+                    ch_list.append(word_sel) 
+            for i,word in enumerate(ch_list):       
+                temp_sent[word_pos[i]] =word
             
-        new_sent = " ".join(temp_sent)
-        
-        return f"{new_sent}"        
-  
-
+        new_sent = " ".join(temp_sent)        
+        return f"{new_sent}"  
     
+       
+  
+@callback(
+    Output('spelling-error', 'children', allow_duplicate=True),
+    Output('real-ids','data'),   
+    Input("submit-button",'n_clicks'),
+    Input('textarea', 'value'),
+    prevent_initial_call=True
+)
+def check_real_erro(n_clicks,value):
+    if n_clicks >0:        
+        wrong_words,words_pos = spell_crrct_obj.detect_real_error(value)    
+        
+        temp_sent = spell_crrct_obj.preproc_sent(value)
+        if len(words_pos) ==0:
+            return(html.P("No spelling error detected/ No match found.")),[words_pos,temp_sent]        
+        else: 
+            div_child =[]           
+            div_child.append(html.H5("Result"))
+            for i,word in enumerate(wrong_words):
+                sorted_keys = spell_crrct_obj.possible_words(wl_process,word)
+                
+                section=html.Div(children=[                
+                    html.H6(f"Found possible wrong words: {word[1]}"),
+                    dcc.Dropdown(sorted_keys,placeholder="Dictionary",id=f'dropdown_{word[1]}')
+                ])
+                div_child.append(section)
+            new_button = html.Button('Submit', id='real-submit-button', className="waves-effect waves-light btn", n_clicks=0)
+            div_child.append(html.Br())    
+            div_child.append(new_button)  
+
+            return div_child,[words_pos,temp_sent]   
+    
+    
+@callback(
+    Output('textarea','value', allow_duplicate=True),    
+    Output('spelling-error', 'children', allow_duplicate=True),
+    Input("real-submit-button",'n_clicks'),
+    State('spelling-error', 'children'),
+    State('real-ids','data'),        
+    prevent_initial_call=True
+)
+def get_real_dropdown_id(n_clicks,children,data):
+    if n_clicks >0:
+        ch_list = []
+        word_pos=data[0]       
+        temp_sent = data[1]  
+        if len(word_pos)!=0:      
+            for child in children:    
+                if type(child['props']['children']) == list:            
+                    word_sel=str(child['props']['children'][1]['props']['value'])               
+                    ch_list.append(word_sel) 
+            
+            for i,word in enumerate(ch_list):                
+                temp_sent[word_pos[i]] =word
+            
+        new_sent = " ".join(temp_sent)       
+        return f"{new_sent}", html.Br(children=[])    
 
 if __name__ == '__main__':
     app.run(debug=True)
